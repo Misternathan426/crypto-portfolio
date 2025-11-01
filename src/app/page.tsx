@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import PortfolioChart from "./components/PortfolioChart";
 
 interface PortfolioItem {
   symbol: string;
@@ -41,6 +42,17 @@ export default function Home() {
   const [amount, setAmount] = useState("");
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const savedPorfolio = localStorage.getItem("cryptoPortfolio");
+    if (savedPorfolio) {
+      setPortfolio(JSON.parse(savedPorfolio));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("cryptoPortfolio", JSON.stringify(portfolio));
+  }, [portfolio]);
 
   const fetchCryptoPrice = async (cryptoSymbol: string) => {
     setLoading(true);
@@ -84,6 +96,10 @@ export default function Home() {
     setAmount("");
   };
 
+  const handleDelete = (index: number) => {
+    setPortfolio(portfolio.filter((_, i) => i !== index));
+  };
+
   const totalValue = portfolio.reduce((acc, item) => acc + item.amount * item.price, 0);
 
   return (
@@ -118,11 +134,17 @@ export default function Home() {
               <span>${item.price.toLocaleString()}</span>
               <span>{item.amount}</span>
               <span>${(item.amount * item.price).toLocaleString()}</span>
+
+              <button onClick={() => handleDelete(i)}
+                className="ml-3 text-red-400 hover:text-red-600 hover:scale-125 transition">
+                  X
+                </button>
             </li>
           ))}
         </ul>
 
         <h3 className="mt-6 text-lg font-bold">Total value: ${totalValue.toLocaleString()}</h3>
+        {portfolio.length > 0 && <PortfolioChart portfolio={portfolio} />}
       </div>
     </main>
   )
