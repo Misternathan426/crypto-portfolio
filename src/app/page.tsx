@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import PortfolioChart from "./components/PortfolioChart";
 
 interface PortfolioItem {
+  _id?: string;
   symbol: string;
   amount: number;
   price: number;
@@ -43,16 +44,65 @@ export default function Home() {
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Load portfolio from MongoDB on component mount
   useEffect(() => {
-    const savedPorfolio = localStorage.getItem("cryptoPortfolio");
-    if (savedPorfolio) {
-      setPortfolio(JSON.parse(savedPorfolio));
-    }
+    fetchPortfolio();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem("cryptoPortfolio", JSON.stringify(portfolio));
-  }, [portfolio]);
+  // Fetch portfolio from MongoDB API
+  const fetchPortfolio = async () => {
+    try {
+      const response = await fetch('/api/portfolio');
+      if (response.ok) {
+        const data = await response.json();
+        setPortfolio(data);
+      }
+    } catch (error) {
+      console.error('Error fetching portfolio:', error);
+    }
+  };
+
+  // Add portfolio item to MongoDB
+  const addToPortfolio = async (portfolioItem: PortfolioItem) => {
+    try {
+      const response = await fetch('/api/portfolio', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(portfolioItem),
+      });
+      
+      if (response.ok) {
+        // Refresh the portfolio from database
+        fetchPortfolio();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error adding portfolio item:', error);
+      return false;
+    }
+  };
+
+  // Delete portfolio item from MongoDB
+  const deleteFromPortfolio = async (id: string) => {
+    try {
+      const response = await fetch(`/api/portfolio?id=${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        // Refresh the portfolio from database
+        fetchPortfolio();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error deleting portfolio item:', error);
+      return false;
+    }
+  };
 
   const fetchCryptoPrice = async (cryptoSymbol: string) => {
     setLoading(true);
@@ -91,20 +141,29 @@ export default function Home() {
       price,
     };
 
-    setPortfolio([...portfolio, newItem]);
-    setSymbol("");
-    setAmount("");
+    const success = await addToPortfolio(newItem);
+    if (success) {
+      setSymbol("");
+      setAmount("");
+    } else {
+      alert("Failed to add portfolio item. Please try again.");
+    }
   };
 
-  const handleDelete = (index: number) => {
-    setPortfolio(portfolio.filter((_, i) => i !== index));
+  const handleDelete = async (id: string) => {
+    if (!id) return;
+    
+    const success = await deleteFromPortfolio(id);
+    if (!success) {
+      alert("Failed to delete portfolio item. Please try again.");
+    }
   };
 
   const totalValue = portfolio.reduce((acc, item) => acc + item.amount * item.price, 0);
 
   return (
-    <main className="flex justify-center items-center min-h-screen bg-black text-white">
-      <div className="bg-neutral-900 p-6 rounded-xl w-[360px]">
+    <main className="flex justify-center items-center min-h-screen bg-black text-white p-4">
+      <div className="bg-neutral-900 p-6 rounded-xl w-full max-w-2xl">
         <h1 className="text-2xl font-bold text-center mb-6">Crypto Portfolio Tracker</h1>
 
         <div className="flex flex-col gap-3">
@@ -128,17 +187,21 @@ export default function Home() {
 
         <h2 className="mt-6 mb-2 font-semibold">Your Portfolio</h2>
         <ul className="flex flex-col gap-2">
-          {portfolio.map((item, i) => (
-            <li key={i} className="p-3 bg-neutral-800 rounded flex justify-between">
-              <span>{item.symbol}</span>
-              <span>${item.price.toLocaleString()}</span>
-              <span>{item.amount}</span>
-              <span>${(item.amount * item.price).toLocaleString()}</span>
-
-              <button onClick={() => handleDelete(i)}
-                className="ml-3 text-red-400 hover:text-red-600 hover:scale-125 transition">
-                  X
-                </button>
+          {portfolio.map((item) => (
+            <li key={item._id} className="p-3 bg-neutral-800 rounded flex justify-between items-center">
+              <div className="flex flex-col">
+                <span className="font-semibold">{item.symbol}</span>
+                <span className="text-sm text-gray-400">{item.amount} coins</span>
+              </div>
+              <div className="flex flex-col text-right">
+                <span className="text-sm">${item.price.toLocaleString()}</span>
+                <span className="font-semibold">${(item.amount * item.price).toLocaleString()}</span>
+              </div>
+              <button 
+                onClick={() => item._id && handleDelete(item._id)}
+                className="ml-3 text-red-400 hover:text-red-600 hover:scale-125 transition px-2 py-1 rounded">
+                ✕
+              </button>
             </li>
           ))}
         </ul>
