@@ -162,11 +162,13 @@ export default function Home() {
   const totalValue = portfolio.reduce((acc, item) => acc + item.amount * item.price, 0);
 
   return (
-    <main className="flex justify-center items-center min-h-screen bg-black text-white p-4">
+    <div className="flex justify-center items-start min-h-screen bg-black text-white p-4 pt-8">
       <div className="bg-neutral-900 p-6 rounded-xl w-full max-w-2xl">
-        <h1 className="text-2xl font-bold text-center mb-6">Crypto Portfolio Tracker</h1>
+        <h1 className="text-2xl font-bold text-center mb-6">Portfolio Dashboard</h1>
 
-        <div className="flex flex-col gap-3">
+        <section id="dashboard" className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 text-center text-gray-300">Add New Investment</h2>
+          <div className="flex flex-col gap-3">
           <input className="p-3 rounded bg-neutral-800 outline-none"
             placeholder="Enter crypto symbol (BTC)"
             value={symbol}
@@ -185,7 +187,10 @@ export default function Home() {
               </button>
         </div>
 
-        <h2 className="mt-6 mb-2 font-semibold">Your Portfolio</h2>
+        </section>
+
+        <section id="portfolio">
+          <h2 className="mt-6 mb-4 font-semibold text-lg">Your Portfolio</h2>
         <ul className="flex flex-col gap-2">
           {portfolio.map((item) => (
             <li key={item._id} className="p-3 bg-neutral-800 rounded flex justify-between items-center">
@@ -206,9 +211,20 @@ export default function Home() {
           ))}
         </ul>
 
-        <h3 className="mt-6 text-lg font-bold">Total value: ${totalValue.toLocaleString()}</h3>
-        {portfolio.length > 0 && <PortfolioChart portfolio={portfolio} />}
+          <div className="mt-6 p-4 bg-neutral-800 rounded-lg">
+            <h3 className="text-lg font-bold text-center">Total Portfolio Value: 
+              <span className="text-green-400 ml-2">${totalValue.toLocaleString()}</span>
+            </h3>
+          </div>
+        </section>
+
+        {portfolio.length > 0 && (
+          <section id="analytics" className="mt-8">
+            <h2 className="mb-4 font-semibold text-lg">Portfolio Analytics</h2>
+            <PortfolioChart portfolio={portfolio} />
+          </section>
+        )}
       </div>
-    </main>
+    </div>
   )
 }

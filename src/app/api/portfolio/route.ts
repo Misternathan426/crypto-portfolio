@@ -11,7 +11,8 @@ export async function POST(req: Request) {
 
         return NextResponse.json(newRecord, { status: 201 });
     } catch (error) {
-        return NextResponse.json({ error }, { status: 500 });
+        console.error('Portfolio POST error:', error);
+        return NextResponse.json({ error: 'Failed to add portfolio item' }, { status: 500 });
     }
 }
 
