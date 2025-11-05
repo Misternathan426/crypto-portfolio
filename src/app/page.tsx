@@ -17,6 +17,7 @@ const symbolToId: { [key: string]: string } = {
   'DOT': 'polkadot',
   'SOL': 'solana',
   'MATIC': 'matic-network',
+  'POLYGON': 'matic-network',
   'LINK': 'chainlink',
   'UNI': 'uniswap',
   'LTC': 'litecoin',
@@ -36,6 +37,16 @@ const symbolToId: { [key: string]: string } = {
   'SAND': 'the-sandbox',
   'CRO': 'crypto-com-chain',
   'APE': 'apecoin',
+  'USDT': 'tether',
+  'USDC': 'usd-coin',
+  'TON': 'the-open-network',
+  'TRX': 'tron',
+  'PEPE': 'pepe',
+  'ICP': 'internet-computer',
+  'HBAR': 'hedera-hashgraph',
+  'DAI': 'dai',
+  'KAS': 'kaspa',
+  'BONK': 'bonk',
 };
 
 export default function Home() {
@@ -44,64 +55,26 @@ export default function Home() {
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Load portfolio from MongoDB on component mount
+  // Load portfolio from localStorage on component mount
   useEffect(() => {
-    fetchPortfolio();
+    const savedPortfolio = localStorage.getItem('cryptoPortfolio');
+    if (savedPortfolio) {
+      setPortfolio(JSON.parse(savedPortfolio));
+    }
   }, []);
 
-  // Fetch portfolio from MongoDB API
-  const fetchPortfolio = async () => {
-    try {
-      const response = await fetch('/api/portfolio');
-      if (response.ok) {
-        const data = await response.json();
-        setPortfolio(data);
-      }
-    } catch (error) {
-      console.error('Error fetching portfolio:', error);
-    }
+  // Save portfolio to localStorage
+  useEffect(() => {
+    localStorage.setItem('cryptoPortfolio', JSON.stringify(portfolio));
+  }, [portfolio]);
+
+  const addToPortfolio = (newItem: PortfolioItem) => {
+    setPortfolio([...portfolio, { ...newItem, _id: Date.now().toString() }]);
   };
 
-  // Add portfolio item to MongoDB
-  const addToPortfolio = async (portfolioItem: PortfolioItem) => {
-    try {
-      const response = await fetch('/api/portfolio', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(portfolioItem),
-      });
-      
-      if (response.ok) {
-        // Refresh the portfolio from database
-        fetchPortfolio();
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error adding portfolio item:', error);
-      return false;
-    }
-  };
-
-  // Delete portfolio item from MongoDB
-  const deleteFromPortfolio = async (id: string) => {
-    try {
-      const response = await fetch(`/api/portfolio?id=${id}`, {
-        method: 'DELETE',
-      });
-      
-      if (response.ok) {
-        // Refresh the portfolio from database
-        fetchPortfolio();
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error deleting portfolio item:', error);
-      return false;
-    }
+  const deleteFromPortfolio = (index: number) => {
+    const updatedPortfolio = portfolio.filter((_, i) => i !== index);
+    setPortfolio(updatedPortfolio);
   };
 
   const fetchCryptoPrice = async (cryptoSymbol: string) => {
@@ -141,22 +114,13 @@ export default function Home() {
       price,
     };
 
-    const success = await addToPortfolio(newItem);
-    if (success) {
-      setSymbol("");
-      setAmount("");
-    } else {
-      alert("Failed to add portfolio item. Please try again.");
-    }
+    addToPortfolio(newItem);
+    setSymbol("");
+    setAmount("");
   };
 
-  const handleDelete = async (id: string) => {
-    if (!id) return;
-    
-    const success = await deleteFromPortfolio(id);
-    if (!success) {
-      alert("Failed to delete portfolio item. Please try again.");
-    }
+  const handleDelete = (index: number) => {
+    deleteFromPortfolio(index);
   };
 
   const totalValue = portfolio.reduce((acc, item) => acc + item.amount * item.price, 0);
@@ -164,7 +128,7 @@ export default function Home() {
   return (
     <div className="flex justify-center items-start min-h-screen bg-black text-white p-4 pt-8">
       <div className="bg-neutral-900 p-6 rounded-xl w-full max-w-2xl">
-        <h1 className="text-2xl font-bold text-center mb-6">Portfolio Dashboard</h1>
+        <h1 className="text-2xl font-bold text-center mb-6">Crypto Portfolio Tracker</h1>
 
         <section id="dashboard" className="mb-8">
           <h2 className="text-lg font-semibold mb-4 text-center text-gray-300">Add New Investment</h2>
@@ -189,10 +153,9 @@ export default function Home() {
 
         </section>
 
-        <section id="portfolio">
-          <h2 className="mt-6 mb-4 font-semibold text-lg">Your Portfolio</h2>
+        <h2 className="mt-6 mb-2 font-semibold">Your Portfolio</h2>
         <ul className="flex flex-col gap-2">
-          {portfolio.map((item) => (
+          {portfolio.map((item, index) => (
             <li key={item._id} className="p-3 bg-neutral-800 rounded flex justify-between items-center">
               <div className="flex flex-col">
                 <span className="font-semibold">{item.symbol}</span>
@@ -203,7 +166,7 @@ export default function Home() {
                 <span className="font-semibold">${(item.amount * item.price).toLocaleString()}</span>
               </div>
               <button 
-                onClick={() => item._id && handleDelete(item._id)}
+                onClick={() => handleDelete(index)}
                 className="ml-3 text-red-400 hover:text-red-600 hover:scale-125 transition px-2 py-1 rounded">
                 ✕
               </button>
@@ -211,19 +174,9 @@ export default function Home() {
           ))}
         </ul>
 
-          <div className="mt-6 p-4 bg-neutral-800 rounded-lg">
-            <h3 className="text-lg font-bold text-center">Total Portfolio Value: 
-              <span className="text-green-400 ml-2">${totalValue.toLocaleString()}</span>
-            </h3>
-          </div>
-        </section>
+        <h3 className="mt-6 text-lg font-bold">Total value: ${totalValue.toLocaleString()}</h3>
 
-        {portfolio.length > 0 && (
-          <section id="analytics" className="mt-8">
-            <h2 className="mb-4 font-semibold text-lg">Portfolio Analytics</h2>
-            <PortfolioChart portfolio={portfolio} />
-          </section>
-        )}
+        {portfolio.length > 0 && <PortfolioChart portfolio={portfolio} />}
       </div>
     </div>
   )
